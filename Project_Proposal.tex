@@ -1,0 +1,75 @@
+\documentclass[11pt]{article}
+\usepackage[review]{acl}
+\usepackage{times}
+\usepackage{latexsym}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{enumitem}
+
+\title{Project Proposal: Grapheme-to-Phoneme Mapping and Bidirectional Transliteration for Kashmiri (Sharada Script)}
+
+\author{Arjun Tikoo \and Bhargav Shukla \\
+  IIIT Hyderabad \\
+  \texttt{\{arjun.t, bhargav.s\}@research.iiit.ac.in} }
+
+\begin{document}
+\maketitle
+
+
+\section{Proposal}
+
+\textbf{Problem Statement:} We are addressing the computational modeling of pronunciation for the Kashmiri language as written in the historical Sharada script. Specifically, we are tackling two intertwined NLP tasks: bidirectional transliteration between Sharada and Latin characters, and a Grapheme-to-Phoneme (G2P) mapping to standard IPA. Kashmiri phonology is unusually complex, featuring phenomena such as palatalization of consonants, a rich set of central vowels (\textit{matras}), and complex epenthesis rules. Accurately mapping the written Sharada graphemes—an Abugida script with inherent vowels—to their spoken phonetic realities requires deep linguistic modeling. This is vital for developing downstream speech synthesis (TTS) and speech recognition (ASR) systems for the language, as well as for the digital preservation of historical texts.
+
+\textbf{Motivation:} Modern NLP resources for Kashmiri predominantly target the heavily utilized Perso-Arabic script. Consequently, computational linguistics tools for the indigenous Sharada script are virtually nonexistent, creating a massive gap in digital accessibility for historical manuscripts. Furthermore, standard neural G2P models require massive amounts of aligned data, which is unavailable for Sharada. A rule-based approach is highly motivated here, as it leverages explicit linguistic knowledge to overcome the zero-resource data bottleneck. By incorporating a bidirectional transliterator, our project also serves as an immediate accessibility tool for linguists and historians who may not read the native script but require phonetic or Latinized access to the texts.
+
+\textbf{Proposed Approach:} We will adopt a meticulously crafted, multi-stage rule-based architecture. 
+\begin{itemize}[leftmargin=*]
+    \item \textbf{Module 1: Bidirectional Transliteration:} Because Sharada is an Abugida, the transliterator will employ finite-state transducers (or complex dictionary mappings) to handle consonant-vowel combinations, resolving inherent vowels (schwa) and dependent vowel signs. It will map Sharada unicode points to standardized Latin equivalents, and vice versa, accounting for consonant conjuncts (\textit{samyuktaksharas}) and the \textit{virama} (halant).
+    \item \textbf{Module 2: G2P Engine:} We will formulate Context-Dependent Rewrite Rules (CDRR). The engine will take the transliterated output and apply phonological rules to generate IPA. Key rules will address Kashmiri-specific phenomena: schwa syncope (deletion of the unwritten inherent vowel in specific phonetic environments), assimilation, and the crucial distinction between palatalized and non-palatalized consonants at the ends of words, which the script often leaves ambiguous.
+\end{itemize}
+
+\section{Dataset}
+
+\textbf{Source:} Due to the severe lack of ready-made digital corpora for Sharada, we will curate a custom lexicon. We will source our vocabulary by extracting high-frequency words from digitized Kashmiri pronunciation dictionaries (such as adaptations of Grierson’s linguistic surveys) and transliterating them into the Sharada script using historical mapping charts.
+
+\textbf{Description:} The dataset will be a trilingual parallel lexicon consisting of approximately 2,000 to 3,000 unique Kashmiri words. Each entry will contain three aligned fields: 
+1) The original Sharada grapheme sequence (encoded in Unicode).
+2) The gold-standard English (Latin) transliteration.
+3) The gold-standard phonemic transcription in standard IPA.
+The domain will be general vocabulary, covering various parts of speech to ensure a wide distribution of phonetic contexts.
+
+\textbf{Relevance:} This dataset is specifically tailored to evaluate both facets of our system. The Latin transliteration field allows us to test the accuracy of the bidirectional transliterator, while the IPA field serves as the ground truth target for the G2P phonological rules. 
+
+\textbf{Preprocessing:} Data preparation will involve rigorous Unicode normalization (e.g., ensuring consistent representation of combined diacritics versus pre-composed characters). We will also need to manually verify a subset of the data to ensure the IPA transcriptions accurately reflect standard spoken Kashmiri, applying necessary filtering to remove incomplete or corrupted entries.
+
+\textbf{Availability:} Currently, no public dataset exists for Sharada-to-IPA G2P. By the end of this project, we will construct, validate, and open-source this dataset to the research community to serve as a benchmark for future work.
+
+\section{Deliverables}
+By the conclusion of the 6-week timeline, we commit to producing the following concrete outputs:
+\begin{itemize}[leftmargin=*]
+    \item \textbf{Codebase:} A clean, modular Python package containing both the bidirectional Sharada-English transliterator and the rule-based G2P engine.
+    \item \textbf{Annotated Dataset:} Our custom-curated Sharada-Kashmiri lexicon (approx. 2,000+ words), serving as a new evaluation benchmark for the community.
+    \item \textbf{Evaluation \& Baseline Comparisons:} A comprehensive final report detailing the system's performance. We will report the Character Error Rate (CER) for the transliteration module, and both the Phoneme Error Rate (PER) and Word Error Rate (WER) for the G2P engine against our gold-standard dataset.
+    \item \textbf{Error Analysis:} A linguistic breakdown of the most frequent G2P failures, categorized by phonetic phenomena (e.g., failure to predict palatalization, incorrect schwa deletion).
+\end{itemize}
+
+\section{Proposed Timeline}
+Our project will be executed over a 6-week period, structured around the following concrete milestones:
+\begin{table}[h]
+\centering
+\begin{tabular}{lp{5.5cm}}
+\toprule
+\textbf{Week} & \textbf{Milestone} \\
+\midrule
+Week 1 & Finalize project scope; begin sourcing dictionary text and defining Sharada Unicode mappings. \\
+Week 2 & Data preprocessing; manually annotate the gold-standard IPA/Latin targets for the test set. \\
+Week 3 & Develop and test the bidirectional Sharada-to-English transliterator module. \\
+Week 4 & Draft primary Context-Dependent Rewrite Rules for the G2P engine; handle inherent vowels. \\
+Week 5 & Refine G2P rules for edge cases (palatalization, epenthesis); run initial evaluation scripts. \\
+Week 6 & Conduct deep error analysis; calculate final PER/WER/CER; write final report and format presentation. \\
+\bottomrule
+\end{tabular}
+\caption{Detailed 6-Week Project Timeline}
+\end{table}
+
+\end{document}

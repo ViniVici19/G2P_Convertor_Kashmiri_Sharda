@@ -1,9 +1,5 @@
 #!/usr/bin/env python3
 """
-sharada_ipa.py — Sharada Script -> IPA (Phase 1)
-=================================================
-Converts Unicode Sharada text to a broad IPA transcription.
-
 Usage:
     python sharada_ipa.py corpus.txt              # annotate whole file
     python sharada_ipa.py --word <word>           # single word
@@ -14,14 +10,6 @@ Usage:
 import sys
 import unicodedata
 from collections import Counter
-
-# ══════════════════════════════════════════════════════════════════════════
-# CHARACTER TABLES
-# Sharada = supplementary plane U+11180-U+111DF.
-# Python requires \U000XXXXX (8-digit capital U) for codepoints > 0xFFFF.
-# ══════════════════════════════════════════════════════════════════════════
-
-# Build tables from codepoint integers to avoid escape-sequence errors
 def _c(*codepoints):
     """Return a dict mapping chr(cp) -> ipa for parallel lists."""
     return codepoints
@@ -131,10 +119,6 @@ PUNCTUATION = {
     chr(0x111C8): ".",
 }
 
-# ══════════════════════════════════════════════════════════════════════════
-# HELPERS
-# ══════════════════════════════════════════════════════════════════════════
-
 def _resolve_anusvara(chars, pos):
     j = pos + 1
     while j < len(chars) and chars[j] in " \t":
@@ -148,10 +132,6 @@ def _resolve_anusvara(chars, pos):
 
 def _is_sharada(ch):
     return 0x11180 <= ord(ch) <= 0x111DF
-
-# ══════════════════════════════════════════════════════════════════════════
-# CORE CONVERTER
-# ══════════════════════════════════════════════════════════════════════════
 
 def sharada_to_ipa(text):
     chars = list(text)
@@ -224,10 +204,6 @@ def sharada_to_ipa(text):
 
     return "".join(out)
 
-# ══════════════════════════════════════════════════════════════════════════
-# REPORTING
-# ══════════════════════════════════════════════════════════════════════════
-
 def character_inventory(text):
     counts = Counter(ch for ch in text if _is_sharada(ch))
     print(f"{'CP':<10} {'Ch':<4} {'Count':>6}  {'Tag':<4}  Name")
@@ -271,42 +247,10 @@ def word_table(text):
         print(f"{core:<35}  {sharada_to_ipa(core)}")
 
 
-# ══════════════════════════════════════════════════════════════════════════
-# SAMPLE (your excerpt)
-# ══════════════════════════════════════════════════════════════════════════
-
-SAMPLE = (
-    "\U000111A2\U000111BE\U000111B0\U000111BD\U000111AB\U000111BC"
-    "\U000111A0\U000111BD\U00011182 "
-    "\U00011191\U000111B6\U000111AC\U00011194\U000111C0\U000111A4"
-    "\U000111B3\U000111A4\U000111B3\U00011181 "
-    "\U000111AE\U000111AB\U000111C0\U0001119F\U000111B1\U00011195"
-    "\U000111C0\U00011191\U000111AB\U00011191\U000111B3\U000111AB"
-    "\U00011191\U000111BD\U00011182 \U000111C5\n"
-    "\U00011187\U000111A0\U000111C0\U000111B1\U000111B3\U000111A2"
-    "\U000111C0\U000111AA\U000111A4\U000111C0\U000111A0\U000111BC "
-    "\U00011198\U000111B3\U000111A0\U000111B4\U000111A3\U000111AB"
-    "\U000111C0\U000111A9\U000111B3\U00011182 "
-    "\U00011191\U000111B6\U000111AC\U000111A3\U000111AB\U000111C0"
-    "\U000111A9\U000111B3\U000111AF\U000111C0\U00011196 "
-    "\U000111AF\U000111B3\U000111AF\U000111C0\U000111AE\U000111A0"
-    "\U000111B3\U00011182 \U000111C6 1-43\U000111C6"
-)
-
-# ══════════════════════════════════════════════════════════════════════════
-# CLI
-# ══════════════════════════════════════════════════════════════════════════
-
 if __name__ == "__main__":
     args = sys.argv[1:]
 
-    if not args:
-        print("No file given. Running on built-in sample.\n")
-        annotate_lines(SAMPLE)
-        print("\n-- Word table --\n")
-        word_table(SAMPLE)
-
-    elif args[0] == "--inventory" and len(args) > 1:
+    if args[0] == "--inventory" and len(args) > 1:
         text = open(args[1], encoding="utf-8").read()
         character_inventory(text)
 

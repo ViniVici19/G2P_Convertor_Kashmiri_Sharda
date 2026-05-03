@@ -1,25 +1,9 @@
 #!/usr/bin/env python3
-"""
-sharada_ipa.py — Sharada Script -> IPA (Phase 1)
-=================================================
-Converts Unicode Sharada text to a broad IPA transcription.
-
-Usage:
-    python sharada_ipa.py corpus.txt              # annotate whole file
-    python sharada_ipa.py --word <word>           # single word
-    python sharada_ipa.py --words corpus.txt      # word-by-word table
-    python sharada_ipa.py --inventory corpus.txt  # character inventory
-"""
 
 import sys
 import unicodedata
 from collections import Counter
 
-# ══════════════════════════════════════════════════════════════════════════
-# CHARACTER TABLES
-# Sharada = supplementary plane U+11180-U+111DF.
-# Python requires \U000XXXXX (8-digit capital U) for codepoints > 0xFFFF.
-# ══════════════════════════════════════════════════════════════════════════
 
 # Build tables from codepoint integers to avoid escape-sequence errors
 def _c(*codepoints):
@@ -116,13 +100,32 @@ _NASAL_ASSIMILATION = [
     ({chr(c) for c in range(0x111A5, 0x111AA)}, "m"),       # labials -> m
 ]
 
-VIRAMA   = chr(0x111C0)
-ANUSVARA = chr(0x11181)
-VISARGA  = chr(0x11182)
-AVAGRAHA = chr(0x111C1)
-INHERENT_V = "a"
+VIRAMA      = chr(0x111C0)
+ANUSVARA    = chr(0x11181)
+VISARGA     = chr(0x11182)
+CANDRABINDU = chr(0x11180)   # vowel nasalization marker
+AVAGRAHA    = chr(0x111C1)
+JIHVAMULIYA  = chr(0x111C2)  # voiceless velar fricative (visarga before velars)
+UPADHMANIYA  = chr(0x111C3)  # voiceless bilabial fricative (visarga before labials)
+OM_SIGN      = chr(0x111C4)  # sacred syllable
+INHERENT_V   = "a"
 
 SHARADA_DIGITS = {chr(0x111D0 + i): str(i) for i in range(10)}
+
+# Sibilant codepoints (SHA, SSA, SA) for visarga/anusvara sandhi
+_SIBILANTS = {chr(0x111AF), chr(0x111B0), chr(0x111B1)}
+_SIBILANT_IPA = {
+    chr(0x111AF): "\u0255",   # SHA -> ɕ (palatal)
+    chr(0x111B0): "\u0282",   # SSA -> ʂ (retroflex)
+    chr(0x111B1): "s",        # SA  -> s (dental)
+}
+
+# Voiceless stops for visarga sandhi
+_VOICELESS_VELARS  = {chr(0x11191), chr(0x11192)}  # KA, KHA
+_VOICELESS_LABIALS = {chr(0x111A5), chr(0x111A6)}  # PA, PHA
+
+# HA codepoint for anusvara-before-ha rule
+_HA = chr(0x111B2)
 
 PUNCTUATION = {
     chr(0x111C5): " | ",
@@ -131,27 +134,66 @@ PUNCTUATION = {
     chr(0x111C8): ".",
 }
 
-# ══════════════════════════════════════════════════════════════════════════
-# HELPERS
-# ══════════════════════════════════════════════════════════════════════════
 
 def _resolve_anusvara(chars, pos):
+    """Determine the IPA output for an anusvara based on the following consonant.
+
+    Rule R4 (Anusvara Place Assimilation): the anusvara assimilates to the
+    place of articulation of the following consonant.
+
+    Rule R5 (Anusvara before Sibilants / Ha): before a sibilant (SHA, SSA, SA)
+    or HA, the anusvara nasalises the preceding vowel rather than surfacing as
+    a separate nasal consonant.  We represent this with the IPA nasalisation
+    diacritic (\u0303) applied retroactively to the last vowel in *out*.
+    The returned string is '' so nothing extra is appended.
+    """
     j = pos + 1
     while j < len(chars) and chars[j] in " \t":
         j += 1
     if j < len(chars):
         nxt = chars[j]
+        # R4 — place assimilation before stops/nasals
         for cset, nasal in _NASAL_ASSIMILATION:
             if nxt in cset:
                 return nasal
+        # R5 — nasalise preceding vowel before sibilants / ha
+        if nxt in _SIBILANTS or nxt == _HA:
+            return "\u0303"   # combining tilde; caller prepends to last vowel
     return "m"
+
+
+def _resolve_visarga(chars, pos):
+    """Determine the IPA output for a visarga based on following context.
+
+    Rule R6 (Visarga Sandhi – Sibilants): before SHA / SSA / SA the visarga
+    assimilates completely to the following sibilant.
+
+    Rule R7 (Visarga Sandhi – Voiceless Velars): before KA / KHA the visarga
+    surfaces as the jihvamuliya [x] (voiceless velar fricative).
+
+    Rule R8 (Visarga Sandhi – Voiceless Labials): before PA / PHA the visarga
+    surfaces as the upadhmaniya [ɸ] (voiceless bilabial fricative).
+
+    Otherwise the visarga is realised as plain [h].
+    """
+    j = pos + 1
+    while j < len(chars) and chars[j] in " \t":
+        j += 1
+    if j < len(chars):
+        nxt = chars[j]
+        # R6 — assimilate to following sibilant
+        if nxt in _SIBILANT_IPA:
+            return _SIBILANT_IPA[nxt]
+        # R7 — voiceless velar fricative before ka / kha
+        if nxt in _VOICELESS_VELARS:
+            return "x"
+        # R8 — voiceless bilabial fricative before pa / pha
+        if nxt in _VOICELESS_LABIALS:
+            return "\u0278"  # ɸ
+    return "h"
 
 def _is_sharada(ch):
     return 0x11180 <= ord(ch) <= 0x111DF
-
-# ══════════════════════════════════════════════════════════════════════════
-# CORE CONVERTER
-# ══════════════════════════════════════════════════════════════════════════
 
 def sharada_to_ipa(text):
     chars = list(text)
@@ -174,11 +216,15 @@ def sharada_to_ipa(text):
                 i += 1
             elif chars[i] == ANUSVARA:
                 out.append(INHERENT_V)
-                out.append(_resolve_anusvara(chars, i))
+                nasal = _resolve_anusvara(chars, i)
+                if nasal == "\u0303":            # R5: nasalise vowel
+                    out[-1] = out[-1] + "\u0303"
+                else:
+                    out.append(nasal)
                 i += 1
             elif chars[i] == VISARGA:
                 out.append(INHERENT_V)
-                out.append("h")
+                out.append(_resolve_visarga(chars, i))  # R6/R7/R8
                 i += 1
             else:
                 out.append(INHERENT_V)
@@ -188,15 +234,34 @@ def sharada_to_ipa(text):
             i += 1
 
         elif c == ANUSVARA:
-            out.append(_resolve_anusvara(chars, i))
+            nasal = _resolve_anusvara(chars, i)
+            if nasal == "\u0303" and out:        # R5: nasalise preceding vowel
+                out[-1] = out[-1] + "\u0303"
+            else:
+                out.append(nasal)
             i += 1
 
         elif c == VISARGA:
-            out.append("h")
+            out.append(_resolve_visarga(chars, i))  # R6/R7/R8
             i += 1
 
         elif c == AVAGRAHA:
-            out.append("\u0294")        # glottal stop = elision site
+            out.append("\u0294")        # R3: glottal stop = elision site
+            i += 1
+
+        # --- Rule R9: Jihvamuliya — voiceless velar fricative [x] -------
+        elif c == JIHVAMULIYA:
+            out.append("x")
+            i += 1
+
+        # --- Rule R10: Upadhmaniya — voiceless bilabial fricative [ɸ] ---
+        elif c == UPADHMANIYA:
+            out.append("\u0278")        # ɸ
+            i += 1
+
+        # --- Rule R11: OM sign — sacred syllable -------------------------
+        elif c == OM_SIGN:
+            out.append("o\u02D0m")      # oːm
             i += 1
 
         elif c in SHARADA_DIGITS:
@@ -211,7 +276,15 @@ def sharada_to_ipa(text):
             out.append(c)
             i += 1
 
-        elif ord(c) == 0x11180:         # cantillation mark, skip
+        # --- Rule R1: Candrabindu — vowel nasalisation ------------------
+        elif c == CANDRABINDU:
+            # Nasalise the preceding vowel by appending combining tilde.
+            # If there is no preceding output (rare edge case), emit standalone
+            # nasalisation marker.
+            if out:
+                out[-1] = out[-1] + "\u0303"   # combining tilde
+            else:
+                out.append("\u0303")
             i += 1
 
         elif c in " \t\n\r":
@@ -223,10 +296,6 @@ def sharada_to_ipa(text):
             i += 1
 
     return "".join(out)
-
-# ══════════════════════════════════════════════════════════════════════════
-# REPORTING
-# ══════════════════════════════════════════════════════════════════════════
 
 def character_inventory(text):
     counts = Counter(ch for ch in text if _is_sharada(ch))
@@ -271,42 +340,10 @@ def word_table(text):
         print(f"{core:<35}  {sharada_to_ipa(core)}")
 
 
-# ══════════════════════════════════════════════════════════════════════════
-# SAMPLE (your excerpt)
-# ══════════════════════════════════════════════════════════════════════════
-
-SAMPLE = (
-    "\U000111A2\U000111BE\U000111B0\U000111BD\U000111AB\U000111BC"
-    "\U000111A0\U000111BD\U00011182 "
-    "\U00011191\U000111B6\U000111AC\U00011194\U000111C0\U000111A4"
-    "\U000111B3\U000111A4\U000111B3\U00011181 "
-    "\U000111AE\U000111AB\U000111C0\U0001119F\U000111B1\U00011195"
-    "\U000111C0\U00011191\U000111AB\U00011191\U000111B3\U000111AB"
-    "\U00011191\U000111BD\U00011182 \U000111C5\n"
-    "\U00011187\U000111A0\U000111C0\U000111B1\U000111B3\U000111A2"
-    "\U000111C0\U000111AA\U000111A4\U000111C0\U000111A0\U000111BC "
-    "\U00011198\U000111B3\U000111A0\U000111B4\U000111A3\U000111AB"
-    "\U000111C0\U000111A9\U000111B3\U00011182 "
-    "\U00011191\U000111B6\U000111AC\U000111A3\U000111AB\U000111C0"
-    "\U000111A9\U000111B3\U000111AF\U000111C0\U00011196 "
-    "\U000111AF\U000111B3\U000111AF\U000111C0\U000111AE\U000111A0"
-    "\U000111B3\U00011182 \U000111C6 1-43\U000111C6"
-)
-
-# ══════════════════════════════════════════════════════════════════════════
-# CLI
-# ══════════════════════════════════════════════════════════════════════════
-
 if __name__ == "__main__":
     args = sys.argv[1:]
 
-    if not args:
-        print("No file given. Running on built-in sample.\n")
-        annotate_lines(SAMPLE)
-        print("\n-- Word table --\n")
-        word_table(SAMPLE)
-
-    elif args[0] == "--inventory" and len(args) > 1:
+    if args[0] == "--inventory" and len(args) > 1:
         text = open(args[1], encoding="utf-8").read()
         character_inventory(text)
 

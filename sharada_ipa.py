@@ -7,7 +7,6 @@ from collections import Counter
 
 # Build tables from codepoint integers to avoid escape-sequence errors
 def _c(*codepoints):
-    """Return a dict mapping chr(cp) -> ipa for parallel lists."""
     return codepoints
 
 # Independent vowels
@@ -136,17 +135,6 @@ PUNCTUATION = {
 
 
 def _resolve_anusvara(chars, pos):
-    """Determine the IPA output for an anusvara based on the following consonant.
-
-    Rule R4 (Anusvara Place Assimilation): the anusvara assimilates to the
-    place of articulation of the following consonant.
-
-    Rule R5 (Anusvara before Sibilants / Ha): before a sibilant (SHA, SSA, SA)
-    or HA, the anusvara nasalises the preceding vowel rather than surfacing as
-    a separate nasal consonant.  We represent this with the IPA nasalisation
-    diacritic (\u0303) applied retroactively to the last vowel in *out*.
-    The returned string is '' so nothing extra is appended.
-    """
     j = pos + 1
     while j < len(chars) and chars[j] in " \t":
         j += 1
@@ -163,19 +151,6 @@ def _resolve_anusvara(chars, pos):
 
 
 def _resolve_visarga(chars, pos):
-    """Determine the IPA output for a visarga based on following context.
-
-    Rule R6 (Visarga Sandhi – Sibilants): before SHA / SSA / SA the visarga
-    assimilates completely to the following sibilant.
-
-    Rule R7 (Visarga Sandhi – Voiceless Velars): before KA / KHA the visarga
-    surfaces as the jihvamuliya [x] (voiceless velar fricative).
-
-    Rule R8 (Visarga Sandhi – Voiceless Labials): before PA / PHA the visarga
-    surfaces as the upadhmaniya [ɸ] (voiceless bilabial fricative).
-
-    Otherwise the visarga is realised as plain [h].
-    """
     j = pos + 1
     while j < len(chars) and chars[j] in " \t":
         j += 1
@@ -249,17 +224,17 @@ def sharada_to_ipa(text):
             out.append("\u0294")        # R3: glottal stop = elision site
             i += 1
 
-        # --- Rule R9: Jihvamuliya — voiceless velar fricative [x] -------
+        # Rule R9: Jihvamuliya — voiceless velar fricative [x]
         elif c == JIHVAMULIYA:
             out.append("x")
             i += 1
 
-        # --- Rule R10: Upadhmaniya — voiceless bilabial fricative [ɸ] ---
+        # Rule R10: Upadhmaniya — voiceless bilabial fricative [ɸ]
         elif c == UPADHMANIYA:
             out.append("\u0278")        # ɸ
             i += 1
 
-        # --- Rule R11: OM sign — sacred syllable -------------------------
+        # Rule R11: OM sign — sacred syllable
         elif c == OM_SIGN:
             out.append("o\u02D0m")      # oːm
             i += 1
@@ -276,7 +251,7 @@ def sharada_to_ipa(text):
             out.append(c)
             i += 1
 
-        # --- Rule R1: Candrabindu — vowel nasalisation ------------------
+        # Rule R1: Chandrabindu — vowel nasalisation 
         elif c == CANDRABINDU:
             # Nasalise the preceding vowel by appending combining tilde.
             # If there is no preceding output (rare edge case), emit standalone

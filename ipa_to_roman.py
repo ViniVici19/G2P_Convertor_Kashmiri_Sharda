@@ -2,15 +2,15 @@
 """
 ipa_to_roman.py
 ===============
-Converts IPA transcriptions (produced by sharada_to_ipa.py) into a
+Converts IPA transcriptions (produced by sharada_ipa.py) into a
 Roman transliteration following a modified ISO 15919 / IAST-style scheme
 adapted for Kashmiri phonology.
 
 Pipeline:
-    Sharada  →  [sharada_to_ipa.py]  →  IPA  →  [ipa_to_roman.py]  →  Roman
+    Sharada  →  [sharada_ipa.py]  →  IPA  →  [ipa_to_roman.py]  →  Roman
 
 This file can also run the FULL pipeline (Sharada → Roman) by importing
-sharada_to_ipa.sharada_to_ipa() directly, so you only need the corpus once.
+sharada_ipa.sharada_ipa() directly, so you only need the corpus once.
 
 Usage:
     # Full pipeline from raw Sharada corpus:
@@ -28,7 +28,7 @@ Usage:
     # Word-level Roman table from corpus:
     python ipa_to_roman.py --word-table corpus.txt
 
-Author: extends sharada_to_ipa.py rules
+Author: extends sharada_ipa.py rules
 """
 
 import sys
@@ -116,21 +116,11 @@ IPA_TO_ROMAN_RAW = {
     # (handled implicitly via multi-char keys above)
 }
 
-# Build a sorted list: longest keys first for greedy matching
 IPA_TO_ROMAN = sorted(IPA_TO_ROMAN_RAW.items(), key=lambda x: -len(x[0]))
 
 
-# ─────────────────────────────────────────────────────────────────────────────
-# CORE FUNCTION
-# ─────────────────────────────────────────────────────────────────────────────
-
 def ipa_to_roman(ipa_string: str) -> str:
-    """
-    Convert an IPA transcription string to Roman transliteration.
 
-    The function uses greedy longest-match left-to-right substitution.
-    Non-IPA characters (spaces, digits, punctuation, brackets) pass through.
-    """
     s = ipa_string
     out = []
 
@@ -156,13 +146,13 @@ def ipa_to_roman(ipa_string: str) -> str:
 def sharada_to_roman(sharada_text: str) -> str:
     """
     Full pipeline: Sharada script → IPA → Roman transliteration.
-    Imports sharada_to_ipa from the sibling module.
+    Imports sharada_ipa from the sibling module.
     """
     try:
-        from sharada_to_ipa import sharada_to_ipa as s2ipa
+        from sharada_ipa import sharada_ipa as s2ipa
     except ImportError:
         print(
-            "ERROR: sharada_to_ipa.py not found in the same directory.\n"
+            "ERROR: sharada_ipa.py not found in the same directory.\n"
             "       Place both scripts in the same folder.",
             file=sys.stderr,
         )
@@ -171,10 +161,6 @@ def sharada_to_roman(sharada_text: str) -> str:
     ipa = s2ipa(sharada_text)
     return ipa_to_roman(ipa)
 
-
-# ─────────────────────────────────────────────────────────────────────────────
-# OUTPUT MODES
-# ─────────────────────────────────────────────────────────────────────────────
 
 def convert_corpus_full_pipeline(input_path: str, output_path: str) -> None:
     """
@@ -186,10 +172,10 @@ def convert_corpus_full_pipeline(input_path: str, output_path: str) -> None:
         (blank)
     """
     try:
-        from sharada_to_ipa import sharada_to_ipa as s2ipa
+        from sharada_ipa import sharada_ipa as s2ipa
     except ImportError:
         print(
-            "ERROR: sharada_to_ipa.py not found in the same directory.",
+            "ERROR: sharada_ipa.py not found in the same directory.",
             file=sys.stderr,
         )
         sys.exit(1)
@@ -217,7 +203,7 @@ def convert_corpus_full_pipeline(input_path: str, output_path: str) -> None:
 
 def convert_from_ipa_file(input_path: str, output_path: str) -> None:
     """
-    Read a pre-generated IPA file (output of sharada_to_ipa.py)
+    Read a pre-generated IPA file (output of sharada_ipa.py)
     and convert IPA lines to Roman.
 
     Handles the paired format:
@@ -288,24 +274,20 @@ def convert_single_ipa(ipa_string: str) -> None:
 def convert_single_word(sharada_word: str) -> None:
     roman = sharada_to_roman(sharada_word)
     try:
-        from sharada_to_ipa import sharada_to_ipa as s2ipa
+        from sharada_ipa import sharada_ipa as s2ipa
         ipa = s2ipa(sharada_word)
     except ImportError:
-        ipa = "(sharada_to_ipa.py not found)"
+        ipa = "(sharada_ipa.py not found)"
     print(f"\nSharada : {sharada_word}")
     print(f"IPA     : /{ipa}/")
     print(f"Roman   : {roman}")
 
 
 def convert_word_table(input_path: str, output_path: str) -> None:
-    """
-    Build a three-column TSV from the corpus:
-        sharada_word  TAB  ipa  TAB  roman
-    """
     try:
-        from sharada_to_ipa import sharada_to_ipa as s2ipa
+        from sharada_ipa import sharada_ipa as s2ipa
     except ImportError:
-        print("ERROR: sharada_to_ipa.py not found.", file=sys.stderr)
+        print("ERROR: sharada_ipa.py not found.", file=sys.stderr)
         sys.exit(1)
 
     text = Path(input_path).read_text(encoding="utf-8")
@@ -339,11 +321,6 @@ def print_roman_mapping() -> None:
     print("─" * 28)
     for ipa_sym, roman in sorted(IPA_TO_ROMAN_RAW.items(), key=lambda x: x[1]):
         print(f"  {ipa_sym:<10}  {roman}")
-
-
-# ─────────────────────────────────────────────────────────────────────────────
-# CLI
-# ─────────────────────────────────────────────────────────────────────────────
 
 def build_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(

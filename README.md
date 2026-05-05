@@ -71,11 +71,18 @@ The script provides three reporting modes. The annotate_lines function prints ea
 
 The command-line interface supports the following usage:
 
+---
+
+### 🔹 **Sharada → IPA**
+
+```bash
 python sharada_to_ipa.py corpus.txt                  -- convert the corpus to IPA (generates a new text file)
 python sharada_to_ipa.py --word <word>               -- convert a single Sharada word to IPA
 python sharada_to_ipa.py --annotate corpus.txt       -- output original lines with IPA transcription below each
 python sharada_to_ipa.py --word-table corpus.txt     -- generate a deduplicated word ↔ IPA TSV table
 python sharada_to_ipa.py --inventory corpus.txt      -- print a frequency table of Sharada characters
+
+### 🔹 **IPA → Roman**
 
 
 python ipa_to_roman.py corpus.txt                -- full pipeline: Sharada → IPA → Roman (one line per input line)
@@ -85,11 +92,15 @@ python ipa_to_roman.py --word <word>             -- convert a single Sharada wor
 python ipa_to_roman.py --word-table corpus.txt   -- generate a TSV with sharada / IPA / Roman columns
 python ipa_to_roman.py --show-mapping            -- display the IPA → Roman mapping table
 
+---
+
 
 The code features Rishi.html file that upon being run is a GUI that soupports Sharada to IPA conversion.
 To run it just, use a live server (supported on VS Code) and run it just like an ordinary HTML File.
 
 Running with no arguments processes a built-in sample excerpt.
+
+---
 
 
 ## 4. Training and Testing Methodology
